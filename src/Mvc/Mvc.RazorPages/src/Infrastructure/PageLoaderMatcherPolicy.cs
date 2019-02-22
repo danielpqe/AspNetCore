@@ -7,15 +7,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Matching;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 {
     internal class PageLoaderMatcherPolicy : MatcherPolicy, IEndpointSelectorPolicy
     {
-        private readonly IPageLoader _loader;
+        private readonly PageLoaderBase _loader;
 
-        public PageLoaderMatcherPolicy(IPageLoader loader)
+        public PageLoaderMatcherPolicy(PageLoaderBase loader)
         {
             if (loader == null)
             {
@@ -53,7 +52,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             return false;
         }
 
-        public Task ApplyAsync(HttpContext httpContext, EndpointSelectorContext context, CandidateSet candidates)
+        public async Task ApplyAsync(HttpContext httpContext, EndpointSelectorContext context, CandidateSet candidates)
         {
             if (httpContext == null)
             {
@@ -72,18 +71,16 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             
             for (var i = 0; i < candidates.Count; i++)
             {
-                ref var candidate = ref candidates[i];
+                var candidate = candidates[i];
                 var endpoint = (RouteEndpoint)candidate.Endpoint;
 
                 var page = endpoint.Metadata.GetMetadata<PageActionDescriptor>();
                 if (page != null)
                 {
-                    var compiled = _loader.Load(page);
+                    var compiled = await _loader.LoadAsync(page);
                     candidates.ReplaceEndpoint(i, compiled.Endpoint, candidate.Values);
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }
